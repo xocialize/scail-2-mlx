@@ -77,7 +77,7 @@ uv pip install -e refs/mlx-video -e ".[parity]"
 ## Weights
 
 Converted MLX weights (WIP, formats may change):
-[`xocialize/SCAIL-2-MLX`](https://huggingface.co/xocialize/SCAIL-2-MLX) —
+[`xocialize/SCAIL-2-bf16`](https://huggingface.co/xocialize/SCAIL-2-bf16) —
 `dit.safetensors` (bf16, 33 GB), `umt5.safetensors` (bf16, 11 GB),
 `clip.safetensors` (fp16, 1.2 GB), `vae.safetensors` (fp32, 0.5 GB).
 
