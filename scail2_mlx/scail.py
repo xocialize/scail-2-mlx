@@ -21,6 +21,7 @@ from mlx_video.models.wan_2.vae import WanVAE as _MlxVideoWanVAE
 from .modules.clip import CLIPModel, clip_xlm_roberta_vit_h_14
 from .modules.model_scail2 import SCAIL2Model
 from .utils.scail_utils import extract_and_compress_mask_to_latent
+from .utils.vae_stream import decode_chunked
 
 __all__ = ["SCAIL2Pipeline"]
 
@@ -52,7 +53,10 @@ class _WanVAEAdapter:
         return [self.model.encode(u[None].astype(mx.float32))[0] for u in videos]
 
     def decode(self, zs):
-        return [self.model.decode(z[None].astype(mx.float32))[0] for z in zs]
+        # decode_chunked, not model.decode: upstream-faithful 1+(T-1)*4 frame
+        # count and first-chunk handling (whole-seq decode emits 4*T frames
+        # with a divergent head and +3-frame phase shift)
+        return [decode_chunked(self.model, z[None].astype(mx.float32))[0] for z in zs]
 
 
 class _T5EncoderAdapter:
