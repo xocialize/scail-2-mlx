@@ -16,6 +16,28 @@ skill: translate → parity-lock → pipeline → convert → e2e → quantize.
 - 28-ch mask compression parity — exact (2 tests).
 - State-dict key remap locked by strict loader in the forward tests.
 
+### G2 — CLIP xlm-roberta ViT-H/14 visual tower ✅ (2026-06-11)
+Real-weights parity fp32: max_abs 2.7e-4 / mean 1.7e-6. fp16 storage matches
+upstream production `clip_dtype`. Discovered en route: M5 Max Metal fp32 GEMM
+runs at ~8e-4 relative (TF32-class) — parity suite pinned to CPU stream.
+
+### G3 — Weight conversion ✅ (2026-06-11)
+dit 32.8 GB bf16 (1307/1307 strict keys), vae fp32, umt5 bf16, clip fp16.
+
+### G4 — Pipeline ✅ (2026-06-11)
+First e2e: animation_001 (end-to-end driving mode) 512×288 / 8 steps —
+clean motion transfer, checkerboard detector clean, peak 102.6 GB,
+~115 s/step (2× sequential CFG forwards, fp32 activations).
+
+### G5 — open items
+- 68-vs-65 frame decode count: mlx-video VAE temporal head emits 4·T frames
+  for T latents; upstream emits 1+(T−1)·4. Find the 3 extra frames, align.
+- bf16 activation pass + batched/collapsed CFG (2× speedup candidates).
+- Golden vs PT: upstream requires CUDA flash-attn; CPU-oracle full-denoise
+  comparison is hours-scale — decide scope (component parity + visual may
+  suffice given results).
+
+### ~~G2~~ (original plan below)
 ### G2 — CLIP xlm-roberta ViT-H/14 visual tower
 - Port `refs/SCAIL-2/wan/modules/clip.py` visual branch (+ `xlm_roberta.py` is
   text-only — NOT needed: checkpoint is `onlyvisual`).

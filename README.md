@@ -6,13 +6,15 @@ video → animated video), CVPR 2026 Findings lineage, arXiv 2512.05905. Support
 cross-identity replacement, multi-character scenes, and animal driving without
 intermediate pose representations.
 
-> **Status: DiT parity-locked.** The SCAIL2 diffusion backbone (Wan2.1-I2V-14B
-> fork: 3-segment ref/video/pose RoPE with per-segment shifts + avg-pooled pose
-> frequencies, dual mask patch embeddings, i2v CLIP cross-attention) matches the
-> PT reference **bit-exactly (max_abs = 0.0)** at fp32 on a tiny config, across
-> animation/replace modes and with/without clean-history conditioning.
-> Remaining: CLIP ViT-H visual tower, pipeline, weight conversion, e2e. See
-> [PORT-PLAN.md](PORT-PLAN.md).
+> **Status: end-to-end generation working.** All components parity-locked vs
+> the PT CPU oracle (22 tests; CLIP validated on real weights at max_abs
+> 2.7e-4 fp32), full 14B checkpoint converted (1307/1307 keys), and the
+> bundled `animation_001` example generates clean motion transfer on an
+> M5 Max: reference identity/environment preserved, driving dance reproduced,
+> zero checkerboard artifacts, at 8 sampling steps / 512×288 (~115 s/step,
+> peak 103 GB, fp32 activations — bf16 + batched-CFG speed pass pending).
+> See [PORT-PLAN.md](PORT-PLAN.md) for remaining gates (G5 golden/perf, G6
+> quant + publish).
 
 ## Why this port is cheap
 
