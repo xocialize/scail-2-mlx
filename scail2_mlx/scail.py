@@ -261,6 +261,10 @@ class SCAIL2Pipeline:
             self.clip = None
             mx.clear_cache()
 
+        # cap the Metal buffer cache: without a limit, per-step transient
+        # buffers accumulate as cached-but-unused memory over a 40-step loop
+        mx.set_cache_limit(8 * 1024**3)
+
         def apply_clean_history(latent, history_latent):
             if history_latent is None:
                 return latent
@@ -388,9 +392,16 @@ class SCAIL2Pipeline:
                 )[0]
                 latent = apply_clean_history(temp_x0, history_latent)
                 # bound the lazy graph per denoise step (Metal command-buffer
-                # timeout) and keep peak memory flat
+                # timeout) and keep peak memory flat; clear the Metal buffer
+                # cache so freed step workspace doesn't ratchet RSS upward
+                # across the loop (the silent-SIGKILL failure mode)
                 mx.eval(latent)
-                logging.info(f"  step {step_idx + 1}/{len(timesteps)}")
+                mx.clear_cache()
+                logging.info(
+                    f"  step {step_idx + 1}/{len(timesteps)} "
+                    f"active={mx.get_active_memory() / 1e9:.1f}GB "
+                    f"peak={mx.get_peak_memory() / 1e9:.1f}GB"
+                )
 
             videos = self.vae.decode([latent])
             segment_video = videos[0]
