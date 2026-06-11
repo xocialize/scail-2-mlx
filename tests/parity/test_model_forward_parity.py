@@ -58,6 +58,15 @@ def test_forward_parity(pt_scail2, replace_flag, history):
     pt_model = pt_scail2.SCAIL2Model(**TINY).eval().float()
     state = {k: v.detach().numpy() for k, v in pt_model.state_dict().items()}
 
+    # upstream init_weights zero-inits the final head Linear, which would make
+    # the output a constant bias vector and the comparison vacuous — give every
+    # zero/constant-init weight real values on BOTH sides
+    rng = np.random.default_rng(99)
+    for key, arr in state.items():
+        if np.abs(arr).sum() == 0 or arr.std() == 0:
+            state[key] = (0.02 * rng.standard_normal(arr.shape)).astype(arr.dtype)
+    pt_model.load_state_dict({k: torch.from_numpy(v) for k, v in state.items()})
+
     mx_model = SCAIL2Model(**TINY)
     load_state_dict_np(mx_model, state, strict=True)
 
