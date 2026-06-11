@@ -1,0 +1,20 @@
+scail-2-mlx
+Copyright 2026 xocialize
+
+Apple MLX port of SCAIL-2. Derived from:
+
+- SCAIL-2 (https://github.com/zai-org/SCAIL-2), Zhipu AI / zai-org,
+  Apache-2.0. Model architecture (wan/modules/model_scail2.py), pipeline
+  (wan/scail.py), mask utilities, and checkpoint key remapping (convert.py)
+  are translated 1:1 from this codebase.
+- Wan2.1 (https://github.com/Wan-Video/Wan2.1), Alibaba Wan Team,
+  Apache-2.0. SCAIL-2 is a fork of the Wan2.1 codebase; the VAE, umT5
+  encoder, and CLIP modules originate there.
+- mlx-video (https://github.com/Blaizzy/mlx-video), Prince Canuma,
+  MIT. Provides the Wan2 MLX substrate used at runtime (WanVAE, T5Encoder,
+  FlowUniPCScheduler).
+- CLIP / open_clip (OpenAI / mlfoundations), MIT. The xlm-roberta ViT-H/14
+  visual tower architecture.
+
+Model weights converted from https://huggingface.co/zai-org/SCAIL-2
+(model card states MIT; the GitHub repository is Apache-2.0).

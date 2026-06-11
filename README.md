@@ -6,15 +6,23 @@ video → animated video), CVPR 2026 Findings lineage, arXiv 2512.05905. Support
 cross-identity replacement, multi-character scenes, and animal driving without
 intermediate pose representations.
 
-> **Status: end-to-end generation working.** All components parity-locked vs
-> the PT CPU oracle (22 tests; CLIP validated on real weights at max_abs
-> 2.7e-4 fp32), full 14B checkpoint converted (1307/1307 keys), and the
-> bundled `animation_001` example generates clean motion transfer on an
-> M5 Max: reference identity/environment preserved, driving dance reproduced,
-> zero checkerboard artifacts, at 8 sampling steps / 512×288 (~115 s/step,
-> peak 103 GB, fp32 activations — bf16 + batched-CFG speed pass pending).
-> See [PORT-PLAN.md](PORT-PLAN.md) for remaining gates (G5 golden/perf, G6
-> quant + publish).
+> ## ⚠️ Status: work in progress — end-to-end generation working, not yet release-quality
+>
+> This port is days old and under active development. What's solid: every
+> component is parity-locked against the PyTorch reference on a CPU oracle
+> (25 tests — DiT forward, 3-segment RoPE, CLIP on real weights at max_abs
+> 2.7e-4 fp32, chunked VAE decode at <5e-4/frame), the full 14B checkpoint
+> converts cleanly (1307/1307 keys), and the bundled `animation_001` example
+> generates clean motion transfer on an M5 Max (identity/environment
+> preserved, no checkerboard, 65-frame causal decode). Current production
+> config: bf16 activations, ~3.7 min/step at 832×480 (40-layer 14B DiT,
+> 2× sequential CFG), active memory ~34 GB / peak ~47 GB.
+>
+> **Not done yet** (see [PORT-PLAN.md](PORT-PLAN.md)): golden-vs-PyTorch
+> end-to-end comparison, batched-CFG + further perf work, `memory_mode`
+> relay for smaller Macs, spatial halo-tiled decode for 704p+, q8/q4
+> quantization, and replacement-mode / multi-segment validation. Interfaces
+> and weight formats may still change. Expect rough edges.
 
 ## Why this port is cheap
 
@@ -68,10 +76,23 @@ uv pip install -e refs/mlx-video -e ".[parity]"
 
 ## Weights
 
-`zai-org/SCAIL-2` on HF (81 GB): FSDP `.pt` DiT checkpoint + Wan2.1 VAE +
-umT5-XXL + CLIP. Conversion path: upstream `convert.py` (CPU key remap, splits
-fused QKV) → Wan-style safetensors → MLX recipe (Conv3d → NDHWC, per-component
+Converted MLX weights (WIP, formats may change):
+[`xocialize/SCAIL-2-MLX`](https://huggingface.co/xocialize/SCAIL-2-MLX) —
+`dit.safetensors` (bf16, 33 GB), `umt5.safetensors` (bf16, 11 GB),
+`clip.safetensors` (fp16, 1.2 GB), `vae.safetensors` (fp32, 0.5 GB).
+
+To convert from source instead: `zai-org/SCAIL-2` on HF (81 GB) ships an
+FSDP `.pt` DiT checkpoint + Wan2.1 VAE + umT5-XXL + CLIP. Conversion path:
+upstream `convert.py` (CPU key remap, splits fused QKV) → Wan-style
+safetensors → `recipes/convert_scail2.py` (Conv → NDHWC, per-component
 split, `mx.eval` before save).
+
+## Upstream contributions
+
+- [Blaizzy/mlx-video#38](https://github.com/Blaizzy/mlx-video/pull/38) —
+  Wan2.1 causal VAE decode fix (T latents → 1+(T−1)·4 frames, not 4·T)
+  found during this port. This repo carries its own equivalent
+  (`utils/vae_stream.py`) and works with stock mlx-video either way.
 
 ## License
 
