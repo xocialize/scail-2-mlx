@@ -16,7 +16,9 @@ intermediate pose representations.
 > generates clean motion transfer on an M5 Max (identity/environment
 > preserved, no checkerboard, 65-frame causal decode). Current production
 > config: bf16 activations, ~3.7 min/step at 832×480 (40-layer 14B DiT,
-> 2× sequential CFG), active memory ~34 GB / peak ~47 GB.
+> 2× sequential CFG), active memory ~34 GB / peak ~47 GB. **Fast preset:**
+> `--sample-solver dpm++ --sample-steps 16` matches the 40-step UniPC
+> reference perceptually — 51 min per 65-frame 480p clip vs 2h38m.
 >
 > **Not done yet** (see [PORT-PLAN.md](PORT-PLAN.md)): golden-vs-PyTorch
 > end-to-end comparison, batched-CFG + further perf work, `memory_mode`

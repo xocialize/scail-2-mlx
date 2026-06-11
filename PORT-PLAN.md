@@ -37,10 +37,18 @@ activations + encoder eviction + per-step mx.clear_cache (two prior runs
 died at steps 9/15 from Metal buffer-cache RSS ratchet under memory
 pressure; flat trace after the fix).
 
+### G5 — solver benchmark ✅ (2026-06-11)
+dpm++ @ 16 steps ≈ 40-step UniPC reference perceptually (same seed, identity/
+detail/motion indistinguishable, checkerboard-clean, ~4% mean px divergence =
+normal trajectory split). 51 min vs 2h38m per 65-frame 480p clip (3.1×).
+dpm++ @ 20 adds nothing visible. **Fast default: `--sample-solver dpm++
+--sample-steps 16`** (CLI defaults stay at upstream's unipc/40 per the
+match-first rule; document the fast preset instead).
+
 ### G5 — open items
-- 68-vs-65 frame decode count: mlx-video VAE temporal head emits 4·T frames
-  for T latents; upstream emits 1+(T−1)·4. Find the 3 extra frames, align.
-- bf16 activation pass + batched/collapsed CFG (2× speedup candidates).
+- ~~68-vs-65 frame decode count~~ ✅ fixed (vae_stream.py + mlx-video PR #38).
+- ~~bf16 activation pass~~ ✅. Batched/collapsed CFG still open (~1.6×
+  candidate on top of dpm++16).
 - Golden vs PT: upstream requires CUDA flash-attn; CPU-oracle full-denoise
   comparison is hours-scale — decide scope (component parity + visual may
   suffice given results).
