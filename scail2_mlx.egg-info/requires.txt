@@ -1,0 +1,16 @@
+mlx>=0.31.0
+mlx-video
+safetensors>=0.4
+huggingface_hub>=0.34
+numpy>=1.26
+Pillow>=10
+imageio>=2.34
+imageio-ffmpeg>=0.5
+
+[parity]
+torch>=2.2
+diffusers>=0.30
+transformers>=4.48
+einops>=0.8
+easydict>=1.13
+pytest>=8

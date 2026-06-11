@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scail2-mlx"
+version = "0.1.0.dev0"
+description = "Apple MLX port of SCAIL-2 (zai-org) — end-to-end controlled character animation on Apple Silicon"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "xocialize" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "mlx>=0.31.0",
+    # Wan2 substrate (WanAttentionBlock, FlowUniPCScheduler, umT5, Wan VAE).
+    # Dev install: uv pip install -e refs/mlx-video
+    "mlx-video",
+    "safetensors>=0.4",
+    "huggingface_hub>=0.34",
+    "numpy>=1.26",
+    "Pillow>=10",
+    "imageio>=2.34",
+    "imageio-ffmpeg>=0.5",
+]
+
+[project.optional-dependencies]
+# PyTorch + diffusers are DEV-ONLY parity-oracle deps. End users on MLX never need them.
+parity = [
+    "torch>=2.2",
+    "diffusers>=0.30",
+    "transformers>=4.48",
+    "einops>=0.8",
+    "easydict>=1.13",
+    "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+include = ["scail2_mlx*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

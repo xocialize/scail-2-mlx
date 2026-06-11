@@ -1,0 +1,14 @@
+pyproject.toml
+scail2_mlx/__init__.py
+scail2_mlx.egg-info/PKG-INFO
+scail2_mlx.egg-info/SOURCES.txt
+scail2_mlx.egg-info/dependency_links.txt
+scail2_mlx.egg-info/requires.txt
+scail2_mlx.egg-info/top_level.txt
+scail2_mlx/configs/__init__.py
+scail2_mlx/configs/scail_config_14B.py
+scail2_mlx/modules/__init__.py
+scail2_mlx/modules/attention.py
+scail2_mlx/modules/model_scail2.py
+scail2_mlx/utils/__init__.py
+scail2_mlx/utils/weights.py
