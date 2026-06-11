@@ -86,6 +86,7 @@ class SCAIL2Pipeline:
         tokenizer_dir=None,
         lora_path=None,
         lora_alpha=None,
+        evict_encoders=True,
     ):
         r"""
         Args:
@@ -143,6 +144,10 @@ class SCAIL2Pipeline:
             raise NotImplementedError("LoRA fusing lands with G6")
 
         self.sample_neg_prompt = config.sample_neg_prompt
+        # umT5 (11 GB) + CLIP (1.2 GB) are needed once per generate() call;
+        # dropping them after encoding cuts the denoise-phase peak (lance-mlx
+        # PR #6 relay pattern, trivial tier). Makes the pipeline single-shot.
+        self.evict_encoders = evict_encoders
 
     def generate(
         self,
@@ -249,7 +254,12 @@ class SCAIL2Pipeline:
         context_null = self.text_encoder([n_prompt])
 
         clip_context = self.clip.visual([img[:, None, :, :]])
-        mx.eval(clip_context)
+        mx.eval(clip_context, *context, *context_null)
+
+        if self.evict_encoders:
+            self.text_encoder = None
+            self.clip = None
+            mx.clear_cache()
 
         def apply_clean_history(latent, history_latent):
             if history_latent is None:

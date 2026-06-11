@@ -23,6 +23,11 @@ def flash_attention(
     """
     assert tuple(window_size) == (-1, -1), "SCAIL-2 uses global attention only"
 
+    # upstream half(): q/k computed in fp32 (rope) are cast to the value dtype
+    # before attention (bf16 in production; no-op in fp32 parity tests)
+    q = q.astype(v.dtype)
+    k = k.astype(v.dtype)
+
     scale = 1.0 / math.sqrt(q.shape[-1])
     out = mx.fast.scaled_dot_product_attention(
         q.transpose(0, 2, 1, 3),

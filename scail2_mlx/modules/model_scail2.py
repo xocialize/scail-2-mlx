@@ -247,6 +247,10 @@ class WanSelfAttention(nn.Module):
         """
         b, s, n, d = x.shape[0], x.shape[1], self.num_heads, self.head_dim
 
+        # compute in the weight dtype (upstream amp.autocast(bf16) equivalent;
+        # no-op when weights are fp32, e.g. in parity tests)
+        x = x.astype(self.q.weight.dtype)
+
         # query, key, value function
         def qkv_fn(x):
             q = self.norm_q(self.q(x)).reshape(b, s, n, d)
@@ -280,6 +284,9 @@ class WanT2VCrossAttention(WanSelfAttention):
             context_lens(Tensor): Shape [B]
         """
         b, n, d = x.shape[0], self.num_heads, self.head_dim
+
+        x = x.astype(self.q.weight.dtype)
+        context = context.astype(self.q.weight.dtype)
 
         # compute query, key, value
         q = self.norm_q(self.q(x)).reshape(b, -1, n, d)
@@ -315,6 +322,10 @@ class WanI2VCrossAttention(WanSelfAttention):
         context_img = context[:, :image_context_length]
         context = context[:, image_context_length:]
         b, n, d = x.shape[0], self.num_heads, self.head_dim
+
+        x = x.astype(self.q.weight.dtype)
+        context = context.astype(self.q.weight.dtype)
+        context_img = context_img.astype(self.q.weight.dtype)
 
         # compute query, key, value
         q = self.norm_q(self.q(x)).reshape(b, -1, n, d)
@@ -411,7 +422,10 @@ class WanAttentionBlock(nn.Module):
         # cross-attention & ffn function
         def cross_attn_ffn(x, context, context_lens, e):
             x = x + self.cross_attn(self.norm3(x), context, context_lens)
-            y = self.ffn(self.norm2(x).astype(mx.float32) * (1 + e[4]) + e[3])
+            ffn_dtype = self.ffn.layers[0].weight.dtype
+            y = self.ffn(
+                (self.norm2(x).astype(mx.float32) * (1 + e[4]) + e[3]).astype(ffn_dtype)
+            )
             x = x + y * e[5]
             return x
 
@@ -477,7 +491,8 @@ class MLPProj(nn.Module):
 
 def _conv3d_ncdhw(conv, x):
     # PT Conv3d takes NCDHW; MLX takes NDHWC. Returns NDHWC output.
-    return conv(x.transpose(0, 2, 3, 4, 1))
+    # Input cast to weight dtype (autocast equivalent; no-op at fp32).
+    return conv(x.transpose(0, 2, 3, 4, 1).astype(conv.weight.dtype))
 
 
 class SCAIL2Model(nn.Module):
