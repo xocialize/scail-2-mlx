@@ -29,6 +29,14 @@ First e2e: animation_001 (end-to-end driving mode) 512×288 / 8 steps —
 clean motion transfer, checkerboard detector clean, peak 102.6 GB,
 ~115 s/step (2× sequential CFG forwards, fp32 activations).
 
+### G5 — quality reference ✅ / perf items open (2026-06-11)
+40-step UniPC, 832×480×65f, seed 42, animation mode: clean motion transfer,
+identity locked (tattoos/face), checkerboard-free, correct 65-frame causal
+decode. 2h38m wall (~3.8 min/step), active 34.5 GB / peak 54.1 GB — bf16
+activations + encoder eviction + per-step mx.clear_cache (two prior runs
+died at steps 9/15 from Metal buffer-cache RSS ratchet under memory
+pressure; flat trace after the fix).
+
 ### G5 — open items
 - 68-vs-65 frame decode count: mlx-video VAE temporal head emits 4·T frames
   for T latents; upstream emits 1+(T−1)·4. Find the 3 extra frames, align.
