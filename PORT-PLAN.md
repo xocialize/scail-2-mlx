@@ -47,8 +47,12 @@ match-first rule; document the fast preset instead).
 
 ### G5 — open items
 - ~~68-vs-65 frame decode count~~ ✅ fixed (vae_stream.py + mlx-video PR #38).
-- ~~bf16 activation pass~~ ✅. Batched/collapsed CFG still open (~1.6×
-  candidate on top of dpm++16).
+- ~~bf16 activation pass~~ ✅. ~~Batched CFG~~ ✅ implemented + equivalence
+  parity-locked, but **measured ~11% slower** at 480p/35k tokens (forwards
+  already GPU-saturated; B=2 only grows the working set) — default off,
+  available via `batched_cfg=True`. Output diverges ~3.8% px from sequential
+  (M5 reduced-precision GPU matmul rounds differently across batch-shaped
+  kernels; trajectory split, same quality — CPU parity test proves the math).
 - Golden vs PT: upstream requires CUDA flash-attn; CPU-oracle full-denoise
   comparison is hours-scale — decide scope (component parity + visual may
   suffice given results).

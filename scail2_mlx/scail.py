@@ -173,7 +173,11 @@ class SCAIL2Pipeline:
         n_prompt=None,
         seed=-1,
         noise_override=None,
-        batched_cfg=True,
+        # measured at 832x480x65f (35k tokens): batched B=2 CFG is ~11%
+        # SLOWER than sequential — the 14B forwards already saturate the GPU,
+        # so batching only grows the working set (36/50 GB vs 34/47). May win
+        # at small resolutions; default off.
+        batched_cfg=False,
     ):
         r"""
         Generates video from a reference image + driving inputs. Argument
