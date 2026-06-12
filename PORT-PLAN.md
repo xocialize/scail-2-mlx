@@ -88,6 +88,23 @@ match-first rule; document the fast preset instead).
 - Wire 14B at 512p first; 704p second (~95k-token sequences — consider
   longcat-video-mlx BSA Metal kernels if SDPA is the wall).
 
+### G6 — quantization status (2026-06-12)
+- **GPU cosine gates are INVALID on M5 Max**: bf16 GPU-vs-CPU noise floor
+  measured at 0.99927 on the 14B — exceeds int8-grade signal. All quant
+  verification runs on the CPU stream (recipe still needs the --device flag).
+- **q4 FAILS for real**: CPU-true cosine 0.9498 (g32; gate 0.99). Next
+  escalations: boundary-block hi-precision, q6, or activation-aware quant.
+- **q8 pending** CPU verification (forward in flight).
+- Curiosity to resolve: q4's GPU reading (0.988) was HIGHER than its CPU
+  truth (0.950) — GPU QMM vs CPU QMM may differ numerically; worth a
+  same-weights kernel comparison before trusting either alone.
+
+### Swift port (2026-06-12)
+Standalone Swift port started at `xocialize/scail-2-mlx-swift`
+(/Volumes/DEV_ARCHIVE/scail-2-mlx-swift) with this repo as the oracle.
+MLXEngine wrap explicitly deferred (pipeline too heavy for engine admission);
+donor: bernini-r-mlx-swift (Wan2.2 family). See its PORTING-SPEC.md.
+
 ### G6 — Quantize + publish
 - q8/q4 transformer Linears (`group_size` 64), keep patch embeds / head /
   time-embed hi-precision; gate on per-pass cosine (int4 ≥ 0.99).
