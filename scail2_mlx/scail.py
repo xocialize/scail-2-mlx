@@ -166,6 +166,7 @@ class SCAIL2Pipeline:
         n_prompt=None,
         seed=-1,
         noise_override=None,
+        batched_cfg=True,
     ):
         r"""
         Generates video from a reference image + driving inputs. Argument
@@ -369,23 +370,55 @@ class SCAIL2Pipeline:
                 "replace_flag": replace_flag,
             }
 
+            # batched CFG: one B=2 forward [cond, uncond] instead of two
+            # sequential B=1 forwards — numerically identical, better GPU
+            # occupancy. Falls back to sequential when batched_cfg=False or
+            # guidance is off.
+            use_batched = batched_cfg and guide_scale > 1.0
+            if use_batched:
+                arg_b = {
+                    "context": [arg_c["context"][0], arg_null["context"][0]],
+                    "clip_fea": mx.concatenate([clip_context, clip_context], axis=0),
+                    "seq_len": int(1e10),
+                    "ref_latents": [ref_latent, ref_latent],
+                    "ref_masks": [ref_masks, ref_masks],
+                    "pose_latents": [pose_latent, pose_latent],
+                    "driving_masks": [driving_masks, driving_masks],
+                    "history_mask": (
+                        [history_mask, history_mask]
+                        if history_mask is not None
+                        else None
+                    ),
+                    "replace_flag": replace_flag,
+                }
+
             latent = apply_clean_history(noise, history_latent)
             for step_idx, t in enumerate(timesteps):
-                latent_model_input = [apply_clean_history(latent, history_latent)]
-                timestep = mx.array([t])
+                model_input = apply_clean_history(latent, history_latent)
 
-                noise_pred_cond = self.model(
-                    latent_model_input, t=timestep, **arg_c
-                )[0]
-                if guide_scale <= 1.0:
-                    noise_pred = noise_pred_cond
-                else:
-                    noise_pred_uncond = self.model(
-                        latent_model_input, t=timestep, **arg_null
-                    )[0]
+                if use_batched:
+                    timestep = mx.array([t, t])
+                    preds = self.model(
+                        [model_input, model_input], t=timestep, **arg_b
+                    )
+                    noise_pred_cond, noise_pred_uncond = preds[0], preds[1]
                     noise_pred = noise_pred_uncond + guide_scale * (
                         noise_pred_cond - noise_pred_uncond
                     )
+                else:
+                    timestep = mx.array([t])
+                    noise_pred_cond = self.model(
+                        [model_input], t=timestep, **arg_c
+                    )[0]
+                    if guide_scale <= 1.0:
+                        noise_pred = noise_pred_cond
+                    else:
+                        noise_pred_uncond = self.model(
+                            [model_input], t=timestep, **arg_null
+                        )[0]
+                        noise_pred = noise_pred_uncond + guide_scale * (
+                            noise_pred_cond - noise_pred_uncond
+                        )
 
                 temp_x0 = sample_scheduler.step(
                     noise_pred[None], t, latent[None]
