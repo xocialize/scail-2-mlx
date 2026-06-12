@@ -21,6 +21,14 @@ T5_CONTEXT_TOKEN_NUMBER = 512
 FIRST_LAST_FRAME_CONTEXT_TOKEN_NUMBER = 257 * 2
 
 
+def _compute_dtype(linear):
+    # compute dtype for autocast-style input casts; QuantizedLinear packs
+    # .weight as uint32 — its float dtype lives on .scales
+    if hasattr(linear, "scales"):
+        return linear.scales.dtype
+    return linear.weight.dtype
+
+
 def sinusoidal_embedding_1d(dim, position):
     # preprocess
     assert dim % 2 == 0
@@ -249,7 +257,7 @@ class WanSelfAttention(nn.Module):
 
         # compute in the weight dtype (upstream amp.autocast(bf16) equivalent;
         # no-op when weights are fp32, e.g. in parity tests)
-        x = x.astype(self.q.weight.dtype)
+        x = x.astype(_compute_dtype(self.q))
 
         # query, key, value function
         def qkv_fn(x):
@@ -285,8 +293,8 @@ class WanT2VCrossAttention(WanSelfAttention):
         """
         b, n, d = x.shape[0], self.num_heads, self.head_dim
 
-        x = x.astype(self.q.weight.dtype)
-        context = context.astype(self.q.weight.dtype)
+        x = x.astype(_compute_dtype(self.q))
+        context = context.astype(_compute_dtype(self.q))
 
         # compute query, key, value
         q = self.norm_q(self.q(x)).reshape(b, -1, n, d)
@@ -323,9 +331,9 @@ class WanI2VCrossAttention(WanSelfAttention):
         context = context[:, image_context_length:]
         b, n, d = x.shape[0], self.num_heads, self.head_dim
 
-        x = x.astype(self.q.weight.dtype)
-        context = context.astype(self.q.weight.dtype)
-        context_img = context_img.astype(self.q.weight.dtype)
+        x = x.astype(_compute_dtype(self.q))
+        context = context.astype(_compute_dtype(self.q))
+        context_img = context_img.astype(_compute_dtype(self.q))
 
         # compute query, key, value
         q = self.norm_q(self.q(x)).reshape(b, -1, n, d)
@@ -422,7 +430,7 @@ class WanAttentionBlock(nn.Module):
         # cross-attention & ffn function
         def cross_attn_ffn(x, context, context_lens, e):
             x = x + self.cross_attn(self.norm3(x), context, context_lens)
-            ffn_dtype = self.ffn.layers[0].weight.dtype
+            ffn_dtype = _compute_dtype(self.ffn.layers[0])
             y = self.ffn(
                 (self.norm2(x).astype(mx.float32) * (1 + e[4]) + e[3]).astype(ffn_dtype)
             )

@@ -20,6 +20,7 @@ from mlx_video.models.wan_2.vae import WanVAE as _MlxVideoWanVAE
 
 from .modules.clip import CLIPModel, clip_xlm_roberta_vit_h_14
 from .modules.model_scail2 import SCAIL2Model
+from .utils.quant import quantize_dit, read_quant_config
 from .utils.scail_utils import extract_and_compress_mask_to_latent
 from .utils.vae_stream import decode_chunked
 
@@ -121,7 +122,9 @@ class SCAIL2Pipeline:
             dtype=config.clip_dtype,
         )
 
-        logging.info(f"Creating SCAIL2Model from {weights_dir / 'dit.safetensors'}")
+        quant_cfg = read_quant_config(weights_dir)
+        dit_file = quant_cfg["dit_file"] if quant_cfg else "dit.safetensors"
+        logging.info(f"Creating SCAIL2Model from {weights_dir / dit_file}")
         self.model = SCAIL2Model(
             model_type=config.model_type,
             patch_size=config.patch_size,
@@ -139,7 +142,11 @@ class SCAIL2Pipeline:
             cross_attn_norm=config.cross_attn_norm,
             eps=config.eps,
         )
-        _load_component(self.model, weights_dir / "dit.safetensors")
+        if quant_cfg:
+            quantize_dit(
+                self.model, bits=quant_cfg["bits"], group_size=quant_cfg["group_size"]
+            )
+        _load_component(self.model, weights_dir / dit_file)
         if lora_path is not None:
             raise NotImplementedError("LoRA fusing lands with G6")
 
